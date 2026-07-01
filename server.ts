@@ -3,8 +3,18 @@ import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@supabase/supabase-js";
 import { INITIAL_PRODUCTS } from "./src/initial_products";
 import { Product, Order, UserProfile, ShoppingList, EmailNotification } from "./src/types";
+
+// Initialize Supabase Client
+const SUPABASE_URL = process.env.SUPABASE_URL || "https://jldedqgcnrciivkjkzux.supabase.co";
+const SUPABASE_KEY = process.env.SUPABASE_KEY || "sb_publishable_EdyOZ4ldBd1QN800hdtcuA_TDkI8_YQ";
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let supabaseSyncStatus = "connecting"; // "active" | "no_table" | "error" | "connecting"
+let supabaseSyncError = "";
 
 // Path to file-based persistent database
 const DB_DIR = path.join(process.cwd(), "data");
@@ -122,10 +132,86 @@ function saveDatabase(db: DatabaseSchema) {
   } catch (error) {
     console.error("Failed to save database file:", error);
   }
+
+  // Sync to Supabase as well
+  if (supabase) {
+    (async () => {
+      try {
+        const { error } = await supabase.from("omini_grocer_store")
+          .upsert({ id: "database_state", data: db });
+
+        if (error) {
+          console.warn("Supabase Sync Warning: Failed to save to Supabase Cloud:", error.message);
+          if (error.code === "42P01") {
+            supabaseSyncStatus = "no_table";
+          } else {
+            supabaseSyncStatus = "error";
+            supabaseSyncError = error.message;
+          }
+        } else {
+          supabaseSyncStatus = "active";
+          supabaseSyncError = "";
+          console.log("Supabase Sync: Successfully saved latest state to Supabase!");
+        }
+      } catch (err) {
+        console.error("Supabase Sync Exception during save:", err);
+        supabaseSyncStatus = "error";
+        supabaseSyncError = String(err);
+      }
+    })();
+  }
+}
+
+async function syncWithSupabase() {
+  console.log("Supabase Sync: Checking for existing state on Supabase Cloud...");
+  try {
+    const { data, error } = await supabase
+      .from("omini_grocer_store")
+      .select("data")
+      .eq("id", "database_state")
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116" || error.code === "PGRST204" || error.message?.includes("no rows")) {
+        console.log("Supabase Sync: Table exists but no saved state found. Initializing Supabase state with local data...");
+        supabaseSyncStatus = "active";
+        supabaseSyncError = "";
+        saveDatabase(dbMemory);
+      } else if (error.code === "42P01" || error.message?.includes("relation") || error.message?.includes("does not exist")) {
+        console.warn("Supabase Sync Warning: Table 'omini_grocer_store' does not exist in Supabase yet.");
+        supabaseSyncStatus = "no_table";
+      } else {
+        console.warn("Supabase Sync Warning:", error.message);
+        supabaseSyncStatus = "error";
+        supabaseSyncError = error.message;
+      }
+      return;
+    }
+
+    if (data && data.data) {
+      console.log("Supabase Sync: Successfully loaded state from Supabase Cloud!");
+      dbMemory = data.data as DatabaseSchema;
+      supabaseSyncStatus = "active";
+      supabaseSyncError = "";
+      
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(dbMemory, null, 2), "utf-8");
+      } catch (e) {
+        console.error("Failed to write database file during sync:", e);
+      }
+    }
+  } catch (err: any) {
+    console.error("Supabase Sync Exception during load:", err);
+    supabaseSyncStatus = "error";
+    supabaseSyncError = String(err);
+  }
 }
 
 // Initialize active database in memory with load
 let dbMemory = loadDatabase();
+
+// Sync with Supabase
+syncWithSupabase();
 
 async function startServer() {
   const app = express();
@@ -396,8 +482,8 @@ Be concise. Keep responses to under 4 paragraphs. Do not write raw JSON.`;
     const statusEmail: EmailNotification = {
       id: `email-${Math.floor(10000 + Math.random() * 90000)}`,
       toEmail: order.userEmail,
-      subject: `FreshMarket Co. - Order Update - ${order.id}`,
-      body: `Hi ${order.userName},\n\nWe wanted to let you know that your order (${order.id}) status has been updated to: ${status}.\n\nScheduled Delivery Details:\nDate: ${order.deliveryDetails.date}\nTime Slot: ${order.deliveryDetails.timeSlot}\nAddress: ${order.deliveryDetails.address}\n\nYou can track and view your full order history anytime in your profile dashboard.\n\nThank you for choosing FreshMarket Co.!`,
+      subject: `Omini Grocer - Order Update - ${order.id}`,
+      body: `Hi ${order.userName},\n\nWe wanted to let you know that your order (${order.id}) status has been updated to: ${status}.\n\nScheduled Delivery Details:\nDate: ${order.deliveryDetails.date}\nTime Slot: ${order.deliveryDetails.timeSlot}\nAddress: ${order.deliveryDetails.address}\n\nYou can track and view your full order history anytime in your profile dashboard.\n\nThank you for choosing Omini Grocer!`,
       sentAt: new Date().toISOString(),
       type: "StatusUpdate",
     };
@@ -406,6 +492,20 @@ Be concise. Keep responses to under 4 paragraphs. Do not write raw JSON.`;
     saveDatabase(dbMemory);
 
     res.json({ message: "Order status updated successfully", order });
+  });
+
+  // 12. GET Supabase connection status & setup instructions
+  app.get("/api/db-status", (req, res) => {
+    res.json({
+      status: supabaseSyncStatus,
+      error: supabaseSyncError,
+      url: SUPABASE_URL,
+      sql: `CREATE TABLE omini_grocer_store (
+  id TEXT PRIMARY KEY,
+  data JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);`
+    });
   });
 
   // Vite middleware setup

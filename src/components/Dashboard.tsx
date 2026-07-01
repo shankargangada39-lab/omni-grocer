@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Phone, MapPin, Mail, ShoppingBag, ClipboardList, CheckCircle, Clock, Calendar, ChevronRight, FileText, Trash2, Play, Plus, RefreshCw } from 'lucide-react';
+import { User, Phone, MapPin, Mail, ShoppingBag, ClipboardList, CheckCircle, Clock, Calendar, ChevronRight, FileText, Trash2, Play, Plus, RefreshCw, Database, Copy, AlertCircle, Check } from 'lucide-react';
 import { Order, ShoppingList, Product, UserProfile } from '../types';
 
 interface DashboardProps {
@@ -37,6 +37,36 @@ export default function Dashboard({
 
   // Selected receipt view modal
   const [viewingReceipt, setViewingReceipt] = useState<Order | null>(null);
+
+  // Supabase Sync States
+  const [dbStatus, setDbStatus] = useState<{ status: string; error?: string; url?: string; sql?: string } | null>(null);
+  const [copiedSql, setCopiedSql] = useState(false);
+  const [fetchingDb, setFetchingDb] = useState(false);
+
+  const fetchDbStatus = async () => {
+    setFetchingDb(true);
+    try {
+      const res = await fetch('/api/db-status');
+      const data = await res.json();
+      setDbStatus(data);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setFetchingDb(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchDbStatus();
+  }, []);
+
+  const handleCopySql = () => {
+    if (dbStatus?.sql) {
+      navigator.clipboard.writeText(dbStatus.sql);
+      setCopiedSql(true);
+      setTimeout(() => setCopiedSql(false), 2000);
+    }
+  };
 
   const handleUpdateProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -199,6 +229,105 @@ export default function Dashboard({
               Save Profile Changes
             </button>
           </form>
+        </div>
+
+        {/* Supabase Cloud Sync Panel */}
+        <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xs space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-50 pb-4 mb-1">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-indigo-50 text-indigo-700 shadow-sm">
+                <Database className="h-5.5 w-5.5" />
+              </div>
+              <div>
+                <h3 className="font-display text-base font-bold text-slate-900">Supabase Cloud Sync</h3>
+                <p className="text-xs text-slate-400 font-medium">Real-time database status</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={fetchDbStatus}
+              disabled={fetchingDb}
+              className={`p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 transition-all ${fetchingDb ? 'animate-spin' : ''}`}
+              title="Refresh database status"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Status indicators */}
+            {!dbStatus || dbStatus.status === 'connecting' ? (
+              <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 border border-slate-100">
+                <div className="h-2 w-2 rounded-full bg-slate-400 animate-pulse"></div>
+                <span className="text-xs font-bold text-slate-600">Connecting to Supabase...</span>
+              </div>
+            ) : dbStatus.status === 'active' ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+                  <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="text-xs font-bold text-emerald-800">Cloud Active</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  All Omini Grocer products, order histories, user profiles, shopping lists, and notifications are successfully persisting in real-time to your Supabase PostgreSQL cloud instance.
+                </p>
+                <div className="rounded-lg bg-slate-50 border border-slate-100 p-2.5 text-[10px] font-mono text-slate-400 overflow-x-auto">
+                  <span className="font-bold text-slate-600 block mb-0.5">Connected Endpoint:</span>
+                  {dbStatus.url}
+                </div>
+              </div>
+            ) : dbStatus.status === 'no_table' ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-amber-50 border border-amber-100">
+                  <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span className="text-xs font-bold text-amber-800">Setup Required</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Your Supabase client is connected! However, the target table <code className="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-bold font-mono text-[11px]">omini_grocer_store</code> was not found. Running in local file-based fallback mode.
+                </p>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SQL Setup Query</span>
+                    <button
+                      type="button"
+                      onClick={handleCopySql}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 transition-all cursor-pointer"
+                    >
+                      {copiedSql ? (
+                        <>
+                          <Check className="h-3 w-3 text-emerald-600" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          <span>Copy SQL</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="rounded-xl border border-slate-100 bg-slate-950 p-3 text-[10px] text-slate-300 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed select-all">
+                    {dbStatus.sql}
+                  </pre>
+                  <p className="text-[10px] text-slate-400 leading-normal">
+                    💡 Paste this snippet in the <strong>SQL Editor</strong> of your Supabase dashboard and click "Run", then click the refresh icon above to activate cloud persistence!
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 p-3 rounded-xl bg-rose-50 border border-rose-100">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                  <span className="text-xs font-bold text-rose-800">Connection Error</span>
+                </div>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  The client encountered an error connecting to Supabase:
+                </p>
+                <div className="rounded-xl border border-rose-100 bg-rose-50/50 p-3 text-[11px] font-mono text-rose-700 overflow-x-auto whitespace-pre-wrap">
+                  {dbStatus.error || 'Unknown error. Check client configuration.'}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
