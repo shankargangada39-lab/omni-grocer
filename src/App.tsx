@@ -362,7 +362,7 @@ export default function App() {
       {/* Footer bar */}
       <footer className="border-t border-slate-100 bg-white py-6 text-center text-xs text-slate-400 font-semibold uppercase tracking-wider">
         <div className="mx-auto max-w-7xl px-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-          <span>© 2026 FreshMarket Co. Grocery Delivery & Shelf Management</span>
+          <span>© 2026 Omini Grocer Delivery & Shelf Management</span>
           <div className="flex gap-4">
             <span className="cursor-pointer hover:text-emerald-600 transition-colors">Privacy Policy</span>
             <span>•</span>

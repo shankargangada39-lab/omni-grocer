@@ -289,7 +289,7 @@ export default function CheckoutModal({
 
             <div className="space-y-1">
               <h4 className="font-display text-lg font-bold text-slate-900">Payment Approved!</h4>
-              <p className="text-sm text-slate-500">Your FreshMarket Co. delivery is officially scheduled.</p>
+              <p className="text-sm text-slate-500">Your Omini Grocer delivery is officially scheduled.</p>
             </div>
 
             <div className="w-full rounded-xl border border-slate-100 bg-slate-50 p-4 text-left space-y-2 text-xs font-semibold text-slate-600">

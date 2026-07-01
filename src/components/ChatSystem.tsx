@@ -12,7 +12,7 @@ export default function ChatSystem({ isOpen, onClose }: ChatSystemProps) {
     {
       id: 'msg-1',
       sender: 'assistant',
-      text: "Hello! 🌾 I'm Freshy, your FreshMarket Co. virtual shopping assistant. I can help you check active shelf stock, suggest delicious recipes using our ingredients, or trace delivery details. Ask me anything!",
+      text: "Hello! 🌾 I'm Freshy, your Omini Grocer virtual shopping assistant. I can help you check active shelf stock, suggest delicious recipes using our ingredients, or trace delivery details. Ask me anything!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     },
   ]);

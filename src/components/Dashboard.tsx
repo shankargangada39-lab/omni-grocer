@@ -440,7 +440,7 @@ export default function Dashboard({
             </button>
 
             <div className="border-b border-dashed border-slate-200 pb-5 mb-5 text-center">
-              <h4 className="font-display text-lg font-extrabold text-slate-900">FreshMarket Co. Receipt</h4>
+              <h4 className="font-display text-lg font-extrabold text-slate-900">Omini Grocer Receipt</h4>
               <p className="text-xs text-slate-400">Order Invoice Confirmation</p>
               <div className="mt-4 bg-slate-50 rounded-lg p-2.5 border border-slate-100 text-xs text-slate-600 flex justify-between font-mono">
                 <span>Receipt Ref</span>

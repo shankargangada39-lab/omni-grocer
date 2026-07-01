@@ -39,7 +39,7 @@ export default function Navbar({
           </div>
           <div>
             <h1 className="font-display text-xl font-bold tracking-tight text-slate-900">
-              FreshMarket<span className="text-emerald-600">.Co</span>
+              Omini Grocer<span className="text-emerald-600">.Co</span>
             </h1>
             <p className="font-sans text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Local & Fresh</p>
           </div>
@@ -118,7 +118,7 @@ export default function Navbar({
           <button
             onClick={toggleChat}
             className="p-2 text-slate-500 hover:text-emerald-600 transition-colors rounded-lg hover:bg-slate-50 relative"
-            title="FreshMarket Support Assistant"
+            title="Omini Grocer Support Assistant"
           >
             <MessageSquare className="h-5 w-5" />
             <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
