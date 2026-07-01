@@ -1,0 +1,6 @@
+{
+  "name": "Grocery Store Delivery & Management",
+  "description": "A full-stack grocery store platform featuring real-time inventory, secure multi-currency payments, admin analytics, AI customer support, and order history.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
